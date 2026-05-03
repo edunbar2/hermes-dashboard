@@ -23,11 +23,23 @@
       <div class="panel-body" id="panel-agents-body"></div>
     </section>
 
+    <section class="panel panel-wide" data-panel="kanban" id="panel-kanban">
+      <h2>Kanban — agent work</h2>
+      <div class="panel-body" id="panel-kanban-body"></div>
+    </section>
+
     <section class="panel panel-wide" data-panel="chat" id="panel-chat">
       <h2>Chat</h2>
       <div class="panel-body" id="panel-chat-body"></div>
     </section>
   </main>
+
+  <div class="kb-modal-bg" id="kb-modal-bg">
+    <div class="kb-modal" id="kb-modal">
+      <button class="kb-modal-close" id="kb-modal-close" type="button">close</button>
+      <div id="kb-modal-content"></div>
+    </div>
+  </div>
 
   <script type="module" src="/static/app.js"></script>
 </body>

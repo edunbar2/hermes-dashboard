@@ -6,11 +6,13 @@
 
 import { mountSystemPanel } from "/static/panels/system.js";
 import { mountAgentsPanel } from "/static/panels/agents.js";
+import { mountKanbanPanel } from "/static/panels/kanban.js";
 import { mountChatPanel } from "/static/panels/chat.js";
 
 const PANELS = {
   system: mountSystemPanel,
   agents: mountAgentsPanel,
+  kanban: mountKanbanPanel,
   chat: mountChatPanel,
 };
 

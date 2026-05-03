@@ -11,6 +11,7 @@ def test_index_served(client):
     # Confirm the panel skeleton + module entrypoint are present.
     assert 'data-panel="system"' in r.text
     assert 'data-panel="agents"' in r.text
+    assert 'data-panel="kanban"' in r.text
     assert 'data-panel="chat"' in r.text
     assert "/static/app.js" in r.text
 
@@ -22,6 +23,7 @@ def test_static_assets_served(client):
         "/static/app.js",
         "/static/panels/system.js",
         "/static/panels/agents.js",
+        "/static/panels/kanban.js",
         "/static/panels/chat.js",
     ]:
         r = client.get(path)
