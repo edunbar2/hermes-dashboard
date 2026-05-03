@@ -13,7 +13,7 @@ Modular: drop a new file in `collectors/` or `static/panels/` and you've got a n
 
 ## Status
 
-Implementation in progress. See [`docs/plans/`](docs/plans/) for the full plan.
+**v0.1.0** — running as a systemd user service on port 2002. System metrics, agent state, kanban board, and chat all live. See [`docs/plans/`](docs/plans/) for the original plan and the changelog for what shipped.
 
 ## Prerequisites
 
@@ -84,6 +84,67 @@ All config is via env vars (defaults in parens):
 | `HERMES_DASHBOARD_PORT` | `2002` | bind port |
 | `HERMES_HOME` | `~/.hermes` | where Hermes state DBs live |
 | `HERMES_API_SERVER_URL` | `http://127.0.0.1:8642/v1` | upstream chat endpoint |
+
+## Extending
+
+### New metric collector
+
+A collector is anything with a `name` attribute and an async `collect()`
+that returns a JSON-serializable dict. The `envelope()` helper wraps the
+payload with `{name, ts, data}` so collectors stay consistent on the wire.
+
+```python
+# src/hermes_dashboard/collectors/my_collector.py
+from .base import envelope
+
+class MyCollector:
+    name = "my_metric"
+
+    async def collect(self) -> dict:
+        return envelope(self.name, {"value": 42})
+```
+
+Register it in `collectors/__init__.py`:
+
+```python
+from .my_collector import MyCollector
+# ... in build_registry():
+MyCollector.name: MyCollector(),
+```
+
+Then expose it via a route under `api/` (or attach it to an existing
+aggregate like `/api/hermes/status`).
+
+### New UI panel
+
+Each panel is a vanilla ES module under `static/panels/`. No build step.
+
+1. Add `<section class="panel" data-panel="myname"><h2>…</h2><div class="panel-body"></div></section>` to `index.html`.
+2. Create `static/panels/myname.js` exporting `async function mountMyPanel(root)`.
+3. Register it in `static/app.js`:
+
+```js
+import { mountMyPanel } from "/static/panels/myname.js";
+const PANELS = {
+  // ... existing panels
+  myname: mountMyPanel,
+};
+```
+
+Panels can fetch with `fetch('/api/...')` or stream via `EventSource`.
+The system + kanban panels are good references for SSE.
+
+### Read-only state access
+
+If you need to read a Hermes state DB, open it `mode=ro` so you can't
+accidentally mutate agent state:
+
+```python
+sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=2.0)
+```
+
+Writes belong in the dashboard's own `~/.hermes/dashboard-state.json`
+via `src/hermes_dashboard/state.py`.
 
 ## License
 
