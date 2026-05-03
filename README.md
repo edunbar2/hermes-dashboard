@@ -15,6 +15,20 @@ Modular: drop a new file in `collectors/` or `static/panels/` and you've got a n
 
 Implementation in progress. See [`docs/plans/`](docs/plans/) for the full plan.
 
+## Prerequisites
+
+The chat panel relies on Hermes' built-in `api_server` platform adapter. Set in `~/.hermes/.env`:
+
+```
+API_SERVER_ENABLED=true
+API_SERVER_HOST=127.0.0.1
+API_SERVER_PORT=8642
+```
+
+Then restart the gateway: `systemctl --user restart hermes-gateway`.
+
+Verify it's up: `curl -s http://127.0.0.1:8642/health` should return JSON with status info.
+
 ## Run
 
 ```bash
