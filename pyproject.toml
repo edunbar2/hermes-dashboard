@@ -1,0 +1,41 @@
+[project]
+name = "hermes-dashboard"
+version = "0.1.0"
+description = "LAN-accessible web dashboard for Hermes Agent — system metrics, agent state, kanban, chat"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [{name = "Hermione", email = "hermione@users.noreply.github.com"}]
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "psutil>=6.0",
+    "httpx>=0.27",
+    "aiofiles>=24.1",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+hermes-dashboard = "hermes_dashboard.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+hermes_dashboard = ["static/**/*", "static/panels/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
