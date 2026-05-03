@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .api import hermes as api_hermes
 from .api import system as api_system
 from .collectors import build_registry
 from .config import DashboardConfig
@@ -26,6 +27,7 @@ def create_app(config: DashboardConfig | None = None) -> FastAPI:
     )
 
     app.include_router(api_system.router)
+    app.include_router(api_hermes.router)
 
     @app.get("/")
     async def index() -> FileResponse:

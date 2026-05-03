@@ -13,12 +13,20 @@ from __future__ import annotations
 from pathlib import Path
 
 from .base import Collector, envelope
+from .hermes_cron import HermesCronCollector
+from .hermes_gateway import HermesGatewayCollector
+from .hermes_sessions import HermesSessionsCollector
+from .hermes_status import HermesStatusCollector
 from .system_resources import SystemResourcesCollector
 
 
 def build_registry(hermes_home: Path) -> dict[str, Collector]:
     return {
         SystemResourcesCollector.name: SystemResourcesCollector(),
+        HermesGatewayCollector.name: HermesGatewayCollector(hermes_home),
+        HermesSessionsCollector.name: HermesSessionsCollector(hermes_home),
+        HermesCronCollector.name: HermesCronCollector(hermes_home),
+        HermesStatusCollector.name: HermesStatusCollector(hermes_home),
     }
 
 
