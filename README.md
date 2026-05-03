@@ -36,11 +36,54 @@ pip install -e .
 hermes-dashboard
 ```
 
-## Service
+## Install as a systemd user service
+
+A unit file ships in `systemd/hermes-dashboard.service`. To install:
 
 ```bash
+mkdir -p ~/.config/systemd/user
+cp systemd/hermes-dashboard.service ~/.config/systemd/user/
+systemctl --user daemon-reload
 systemctl --user enable --now hermes-dashboard
 ```
+
+Verify it's running:
+
+```bash
+systemctl --user status hermes-dashboard
+curl -s http://127.0.0.1:2002/healthz
+```
+
+The service binds `0.0.0.0:2002` so it's reachable from the LAN. If your
+firewall blocks the port:
+
+```bash
+sudo firewall-cmd --add-port=2002/tcp --permanent && sudo firewall-cmd --reload
+```
+
+Make sure user services persist across logout / reboot:
+
+```bash
+loginctl show-user $USER | grep Linger    # expect Linger=yes
+sudo loginctl enable-linger $USER          # if not
+```
+
+Logs go to the user journal:
+
+```bash
+journalctl --user -u hermes-dashboard -f
+```
+
+## Configuration
+
+All config is via env vars (defaults in parens):
+
+| Var | Default | What |
+|---|---|---|
+| `HERMES_DASHBOARD_HOST` | `0.0.0.0` | bind address |
+| `HERMES_DASHBOARD_PORT` | `2002` | bind port |
+| `HERMES_HOME` | `~/.hermes` | where Hermes state DBs live |
+| `HERMES_API_SERVER_URL` | `http://127.0.0.1:8642/v1` | upstream chat endpoint |
 
 ## License
 

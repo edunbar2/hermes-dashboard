@@ -1,0 +1,28 @@
+[Unit]
+Description=Hermes Dashboard
+Documentation=https://github.com/edunbar2/hermes-dashboard
+After=network-online.target hermes-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/hermes-dashboard
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.hermes/.env
+ExecStart=%h/hermes-dashboard/.venv/bin/hermes-dashboard
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Sensible-but-not-paranoid hardening. The dashboard reads ~/.hermes
+# state DBs and writes one tiny JSON file (dashboard-state.json), so
+# we leave $HOME writable but lock down the rest of the filesystem.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.hermes %h/hermes-dashboard
+
+[Install]
+WantedBy=default.target
