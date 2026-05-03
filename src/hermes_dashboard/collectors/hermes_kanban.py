@@ -27,6 +27,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+from .. import state as dash_state
 from .base import envelope
 
 _BACKLOG_STATUSES = {"triage", "todo", "ready"}
@@ -106,6 +107,11 @@ class HermesKanbanCollector:
 
             now = int(time.time())
             cutoff = now - _DONE_VISIBILITY_SECONDS
+            # End-of-day archive watermark — bumped to now() by the 23:59
+            # cron so the Done column clears each night even if a task
+            # finished at 23:50 the same day.
+            watermark = dash_state.get_archive_watermark(self.db_path.parent)
+            done_floor = max(watermark, cutoff)
 
             # Pull active rows (any non-archived status that isn't an old "done")
             # plus recent dones. The DB uses INTEGER timestamps for created_at
@@ -125,7 +131,7 @@ class HermesKanbanCollector:
                  ORDER BY priority ASC, created_at DESC
                  LIMIT 200
                 """,
-                (*active_statuses, cutoff),
+                (*active_statuses, done_floor),
             )
             rows = [_row_to_dict(r) for r in cur.fetchall()]
 

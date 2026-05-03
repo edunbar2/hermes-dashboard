@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from ..collectors.base import envelope
+from .. import state as dash_state
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,22 @@ async def task_detail(task_id: str, request: Request) -> dict[str, Any]:
     if detail is None:
         raise HTTPException(status_code=404, detail="task not found")
     return envelope("hermes_kanban_task", detail)
+
+
+@router.post("/archive")
+async def archive_done(request: Request) -> dict[str, Any]:
+    """Bump the end-of-day archive watermark.
+
+    Hit by a Hermes cron job at 23:59 daily, but idempotent and safe to
+    call ad-hoc ("clear the board now"). Sets the watermark to ``now()``
+    so the next ``/board`` snapshot drops every Done card completed
+    before this moment. We never write to Hermes' kanban DB itself —
+    the watermark lives in our own state file under HERMES_HOME.
+    """
+    cfg = request.app.state.config
+    ts = dash_state.set_archive_watermark(cfg.hermes_home)
+    logger.info("kanban archive watermark advanced to %d", ts)
+    return {"archived_at": ts, "watermark": ts}
 
 
 @router.get("/events")

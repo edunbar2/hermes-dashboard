@@ -219,3 +219,47 @@ def test_board_empty_when_db_missing(tmp_path):
     # All three columns still present (empty)
     cols = {c["name"]: c["tasks"] for c in body["columns"]}
     assert cols["Backlog"] == cols["In Progress"] == cols["Done"] == []
+
+
+def test_archive_endpoint_sets_watermark(kanban_client):
+    """POST /api/kanban/archive returns and persists a fresh watermark."""
+    r = kanban_client.post("/api/kanban/archive")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["archived_at"] == body["watermark"]
+    assert body["archived_at"] > 0
+
+
+def test_archive_clears_done_column(kanban_client):
+    """After archive, recent Done cards should disappear from the board."""
+    # Confirm Done has the recent t-1 first
+    pre = kanban_client.get("/api/kanban/board").json()["data"]
+    done_pre = next(c["tasks"] for c in pre["columns"] if c["name"] == "Done")
+    assert any(t["id"] == "t-1" for t in done_pre)
+
+    # Archive
+    kanban_client.post("/api/kanban/archive")
+
+    # Now Done should be empty (t-1 completed_at is < watermark = now())
+    post = kanban_client.get("/api/kanban/board").json()["data"]
+    done_post = next(c["tasks"] for c in post["columns"] if c["name"] == "Done")
+    assert done_post == []
+
+    # In-progress and Backlog must NOT be affected by archive.
+    inprog_post = next(c["tasks"] for c in post["columns"] if c["name"] == "In Progress")
+    assert {t["id"] for t in inprog_post} == {"t-2", "t-2b"}
+
+
+def test_state_module_roundtrip(tmp_path):
+    """Direct unit test for the state module — atomic write, default zero."""
+    from hermes_dashboard import state as ds
+
+    assert ds.get_archive_watermark(tmp_path) == 0
+    ts = ds.set_archive_watermark(tmp_path)
+    assert ds.get_archive_watermark(tmp_path) == ts
+
+    # Corrupt file → falls back to {} silently
+    (tmp_path / "dashboard-state.json").write_text("not json")
+    assert ds.load(tmp_path) == {}
+    assert ds.get_archive_watermark(tmp_path) == 0
+
