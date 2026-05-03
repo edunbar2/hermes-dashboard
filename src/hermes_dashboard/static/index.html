@@ -4,9 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Hermes Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <h1>Hermes Dashboard — bootstrapping</h1>
-  <p>Panels will load here once the frontend ships.</p>
+  <header class="topbar">
+    <div class="brand">⌘ Hermes</div>
+    <div class="status" id="connection-status">connecting…</div>
+  </header>
+
+  <main class="grid">
+    <section class="panel" data-panel="system" id="panel-system">
+      <h2>System</h2>
+      <div class="panel-body" id="panel-system-body"></div>
+    </section>
+
+    <section class="panel" data-panel="agents" id="panel-agents">
+      <h2>Agents</h2>
+      <div class="panel-body" id="panel-agents-body"></div>
+    </section>
+
+    <section class="panel panel-wide" data-panel="chat" id="panel-chat">
+      <h2>Chat</h2>
+      <div class="panel-body" id="panel-chat-body"></div>
+    </section>
+  </main>
+
+  <script type="module" src="/static/app.js"></script>
 </body>
 </html>
