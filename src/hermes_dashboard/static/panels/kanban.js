@@ -86,6 +86,7 @@ export async function mountKanbanPanel(root) {
     grid.querySelectorAll(".kanban-card").forEach(el => {
       el.addEventListener("click", () => {
         if (el.dataset.source === "dashboard") openDashboardTask(el.dataset.taskId, snap);
+        else if (el.dataset.source === "controller") openControllerTask(el.dataset.taskId);
         else openHermesTask(el.dataset.taskId);
       });
     });
@@ -125,6 +126,46 @@ export async function mountKanbanPanel(root) {
       </dl>
       ${t.body ? `<div class="kb-modal-section"><strong>Body</strong><div class="kb-comment">${escapeHtml(t.body)}</div></div>` : ""}`;
     modalBg.classList.add("open");
+  }
+
+  async function openControllerTask(id) {
+    try {
+      const r = await fetch(`/api/controller/tasks/${encodeURIComponent(id)}`);
+      if (!r.ok) {
+        modalContent.innerHTML = `<p style="color:var(--bad)">Failed to load controller task ${escapeHtml(id)}: HTTP ${r.status}</p>`;
+        modalBg.classList.add("open");
+        return;
+      }
+      const body = await r.json();
+      const t = body.data.task;
+      const events = body.data.events || [];
+      const artifacts = body.data.artifacts || [];
+      modalContent.innerHTML = `
+        <h3>${escapeHtml(t.title)}</h3>
+        <dl class="kv">
+          <dt>ID</dt><dd>${escapeHtml(t.id)}</dd>
+          <dt>Source</dt><dd>Hermes Controller v0</dd>
+          <dt>Job</dt><dd>${escapeHtml(t.job_title || t.job_id || "—")}</dd>
+          <dt>Status</dt><dd>${escapeHtml(t.status)}</dd>
+          <dt>Agent</dt><dd>${escapeHtml(t.agent_name || "—")}</dd>
+          <dt>Priority</dt><dd>P${t.priority ?? "—"}</dd>
+          <dt>Planning only</dt><dd>execution disabled</dd>
+          <dt>Created</dt><dd>${fmtRelTime(t.created_at)}</dd>
+          ${t.assigned_at ? `<dt>Assigned</dt><dd>${fmtRelTime(t.assigned_at)}</dd>` : ""}
+          ${t.completed_at ? `<dt>Completed</dt><dd>${fmtRelTime(t.completed_at)}</dd>` : ""}
+        </dl>
+        ${t.body ? `<div class="kb-modal-section"><strong>Description</strong><div class="kb-comment">${escapeHtml(t.body)}</div></div>` : ""}
+        ${t.summary ? `<div class="kb-modal-section"><strong>Summary</strong><div class="kb-comment">${escapeHtml(t.summary)}</div></div>` : ""}
+        <div class="kb-modal-section"><strong>Artifact refs (${artifacts.length})</strong>
+          ${artifacts.length ? artifacts.map(a => `<div class="kb-comment"><div>${escapeHtml(a.path)}</div><div style="font-size:0.75rem;color:var(--text-dim);">${escapeHtml(a.kind)} · ${escapeHtml(a.trust_level)} · ${escapeHtml(a.provenance)}</div></div>`).join("") : `<div style="color:var(--text-dim); margin-top:0.4rem;">No artifacts.</div>`}
+        </div>
+        <div class="kb-modal-section"><strong>Recent controller events (${events.length})</strong>
+          ${events.length ? events.slice(0, 10).map(e => `<div class="kb-event"><div><span class="kind">${escapeHtml(e.event_type)}</span> · ${fmtRelTime(e.created_at)}</div>${e.details_json ? `<div style="font-family:var(--mono);font-size:0.8rem;color:var(--text-dim);margin-top:0.25rem;word-break:break-all;">${escapeHtml(e.details_json)}</div>` : ""}</div>`).join("") : `<div style="color:var(--text-dim); margin-top:0.4rem;">No events yet.</div>`}
+        </div>`;
+      modalBg.classList.add("open");
+    } catch (err) {
+      console.error("controller detail fetch", err);
+    }
   }
 
   async function openHermesTask(id) {

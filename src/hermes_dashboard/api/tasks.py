@@ -143,9 +143,23 @@ async def _combined_board(request: Request) -> dict[str, Any]:
                 card.setdefault("source", "hermes")
                 target["tasks"].append(card)
 
+    # Merge the planning-only Hermes Controller projection.
+    controller = await request.app.state.collectors["hermes_controller"].collect()
+    controller_data = controller.get("data", {})
+    if controller_data.get("available"):
+        for col in controller_data.get("columns", []):
+            target = by_name.get(col.get("name"))
+            if target is None:
+                continue
+            for task in col.get("tasks", []):
+                card = dict(task)
+                card.setdefault("source", "controller")
+                target["tasks"].append(card)
+
     return envelope(
         "dashboard_tasks",
         {
+            "source": "dashboard_tasks",
             "available": True,
             "columns": columns,
             "total": sum(len(c["tasks"]) for c in columns),
@@ -196,16 +210,17 @@ async def archive_done(request: Request) -> dict[str, Any]:
 @router.get("/events")
 async def events(request: Request) -> StreamingResponse:
     kanban = request.app.state.collectors["hermes_kanban"]
+    controller = request.app.state.collectors["hermes_controller"]
 
     async def gen():
         cfg = request.app.state.config
-        last = (await kanban.latest_event_id(), dash_state.latest_dashboard_task_update(cfg.hermes_home))
+        last = (await kanban.latest_event_id(), await controller.latest_event_id(), dash_state.latest_dashboard_task_update(cfg.hermes_home))
         snap = await _combined_board(request)
         yield f"event: board\ndata: {json.dumps(snap)}\n\n"
         try:
             while True:
                 await asyncio.sleep(_SSE_POLL_SECONDS)
-                cur = (await kanban.latest_event_id(), dash_state.latest_dashboard_task_update(cfg.hermes_home))
+                cur = (await kanban.latest_event_id(), await controller.latest_event_id(), dash_state.latest_dashboard_task_update(cfg.hermes_home))
                 if cur != last:
                     last = cur
                     snap = await _combined_board(request)

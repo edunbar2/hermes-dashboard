@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .api import agents as api_agents
 from .api import chat as api_chat
+from .api import controller as api_controller
 from .api import hermes as api_hermes
 from .api import kanban as api_kanban
 from .api import system as api_system
@@ -36,6 +37,7 @@ def create_app(config: DashboardConfig | None = None) -> FastAPI:
     app.include_router(api_hermes.router)
     app.include_router(api_agents.router)
     app.include_router(api_tasks.router)
+    app.include_router(api_controller.router)
     app.include_router(api_chat.router)
     app.include_router(api_kanban.router)
 
