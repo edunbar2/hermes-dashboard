@@ -7,7 +7,7 @@ def test_healthz_ok(client):
 def test_index_served(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert "Hermes Dashboard" in r.text
+    assert "Hermes Control" in r.text
     # Confirm the panel skeleton + module entrypoint are present.
     assert 'data-panel="system"' in r.text
     assert 'data-panel="agents"' in r.text

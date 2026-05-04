@@ -19,6 +19,8 @@ class DashboardConfig:
     port: int
     hermes_home: Path
     api_server_url: str
+    profiles_dir: Path = Path.home() / "Hermes Profiles"
+    task_alerts_enabled: bool = False
 
     @classmethod
     def from_env(cls) -> "DashboardConfig":
@@ -31,4 +33,9 @@ class DashboardConfig:
             api_server_url=os.getenv(
                 "HERMES_API_SERVER_URL", "http://127.0.0.1:8642/v1"
             ),
+            profiles_dir=Path(
+                os.getenv("HERMES_PROFILES_DIR", str(Path.home() / "Hermes Profiles"))
+            ),
+            task_alerts_enabled=os.getenv("HERMES_DASHBOARD_TASK_ALERTS", "0").lower()
+            not in {"0", "false", "no", "off"},
         )

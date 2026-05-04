@@ -7,14 +7,19 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .api import agents as api_agents
 from .api import chat as api_chat
+from .api import controller as api_controller
 from .api import hermes as api_hermes
 from .api import kanban as api_kanban
 from .api import system as api_system
+from .api import tasks as api_tasks
 from .collectors import build_registry
 from .config import DashboardConfig
+from .safe_paths import resolve_child, resolve_root
 
-STATIC_DIR = Path(__file__).parent / "static"
+STATIC_DIR = resolve_root(Path(__file__).parent / "static")
+INDEX_HTML = resolve_child(STATIC_DIR, "index.html")
 
 
 def create_app(config: DashboardConfig | None = None) -> FastAPI:
@@ -30,12 +35,15 @@ def create_app(config: DashboardConfig | None = None) -> FastAPI:
 
     app.include_router(api_system.router)
     app.include_router(api_hermes.router)
+    app.include_router(api_agents.router)
+    app.include_router(api_tasks.router)
+    app.include_router(api_controller.router)
     app.include_router(api_chat.router)
     app.include_router(api_kanban.router)
 
     @app.get("/")
     async def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(INDEX_HTML)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

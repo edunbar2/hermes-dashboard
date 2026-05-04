@@ -10,20 +10,53 @@ function fmtBytes(n) {
   return `${v.toFixed(1)} ${u[i]}`;
 }
 
-function pct(v) { return `${v.toFixed(1)}%`; }
+function pct(v) { return `${Number(v ?? 0).toFixed(1)}%`; }
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]);
+}
 
 function bar(percent) {
-  const cls = percent > 90 ? "bad" : percent > 75 ? "warn" : "";
-  return `<div class="bar ${cls}"><div class="fill" style="width:${percent}%"></div></div>`;
+  const safe = Math.max(0, Math.min(100, Number(percent || 0)));
+  const cls = safe > 90 ? "bad" : safe > 75 ? "warn" : "";
+  return `<div class="bar ${cls}"><div class="fill" style="width:${safe}%"></div></div>`;
+}
+
+function storageCard(disks) {
+  const rows = (disks || []).slice(0, 6);
+  if (!rows.length) {
+    return `
+      <div class="metric storage-card">
+        <div class="metric-label">Storage</div>
+        <div class="metric-value">No mounted disks</div>
+      </div>`;
+  }
+  const worst = rows.reduce((a, b) => Number(a.percent || 0) >= Number(b.percent || 0) ? a : b);
+  return `
+    <div class="metric storage-card">
+      <div class="storage-head">
+        <div>
+          <div class="metric-label">Storage</div>
+          <div class="metric-value">${escapeHtml(worst.mount)} · ${pct(worst.percent)}</div>
+        </div>
+        <div class="storage-free">${fmtBytes(worst.free)} free</div>
+      </div>
+      <div class="storage-list">
+        ${rows.map(p => `
+          <div class="storage-row">
+            <div class="storage-row-top"><span>${escapeHtml(p.mount)}</span><span>${fmtBytes(p.used)} / ${fmtBytes(p.total)}</span></div>
+            ${bar(p.percent)}
+          </div>`).join("")}
+      </div>
+    </div>`;
 }
 
 export async function mountSystemPanel(root) {
   root.innerHTML = `
     <div class="metric-grid" id="sys-grid"></div>
-    <div id="sys-disks" style="margin-top:0.75rem"></div>
   `;
   const grid = root.querySelector("#sys-grid");
-  const disks = root.querySelector("#sys-disks");
 
   function render(snap) {
     const d = snap.data || snap;
@@ -40,16 +73,7 @@ export async function mountSystemPanel(root) {
         <div class="metric-label">${c.label}</div>
         <div class="metric-value">${c.value}</div>
         ${c.barv != null ? bar(c.barv) : ""}
-      </div>`).join("");
-
-    if (d.disk?.length) {
-      disks.innerHTML = `<dl class="kv">${
-        d.disk.map(p => `
-          <dt>${p.mount}</dt>
-          <dd>${fmtBytes(p.used)} / ${fmtBytes(p.total)} (${pct(p.percent)})</dd>
-        `).join("")
-      }</dl>`;
-    }
+      </div>`).join("") + storageCard(d.disk);
   }
 
   // Prime with a single fetch so the panel isn't blank for the first second.

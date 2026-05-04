@@ -8,6 +8,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=%h/hermes-dashboard
 Environment=PYTHONUNBUFFERED=1
+Environment=HERMES_DASHBOARD_TASK_ALERTS=1
 EnvironmentFile=-%h/.hermes/.env
 ExecStart=%h/hermes-dashboard/.venv/bin/hermes-dashboard
 Restart=always

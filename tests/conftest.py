@@ -16,6 +16,7 @@ def config(tmp_path) -> DashboardConfig:
         port=2002,
         hermes_home=tmp_path,
         api_server_url="http://127.0.0.1:8642/v1",
+        task_alerts_enabled=False,
     )
 
 
