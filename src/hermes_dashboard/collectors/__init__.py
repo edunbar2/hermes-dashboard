@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .agent_activity import AgentActivityCollector
 from .base import Collector, envelope
 from .hermes_cron import HermesCronCollector
 from .hermes_gateway import HermesGatewayCollector
@@ -29,6 +30,7 @@ def build_registry(hermes_home: Path) -> dict[str, Collector]:
         HermesCronCollector.name: HermesCronCollector(hermes_home),
         HermesStatusCollector.name: HermesStatusCollector(hermes_home),
         HermesKanbanCollector.name: HermesKanbanCollector(hermes_home),
+        AgentActivityCollector.name: AgentActivityCollector(hermes_home),
     }
 
 

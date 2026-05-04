@@ -15,10 +15,11 @@ Hermes uses these task statuses (verified against the live DB):
   done      — completed successfully
   archived  — soft-deleted / EOD-archived
 
-We bucket those into three on-screen columns:
-  Backlog     ← triage, todo, ready
-  In Progress ← running, blocked
-  Done        ← done (archived hidden — they've been moved out of the board)
+We bucket those into the control-page columns:
+  Assigned / Awaiting Hermione ← triage/todo/ready with no assignee
+  Queued / Assigned            ← triage/todo/ready with an assignee
+  In Progress                  ← running, blocked
+  Done                         ← done (archived hidden)
 """
 from __future__ import annotations
 
@@ -34,9 +35,9 @@ _BACKLOG_STATUSES = {"triage", "todo", "ready"}
 _INPROGRESS_STATUSES = {"running", "blocked"}
 _DONE_STATUSES = {"done"}
 
-# Hide Done cards older than 24h — Task 7.6's EOD cron will eventually move
-# them to ``archived``, but we filter defensively in case the cron is paused.
-_DONE_VISIBILITY_SECONDS = 24 * 3600
+# Hide Done cards older than 3 days. This is a UI/archive-watermark filter in
+# dashboard-owned state; Hermes' kanban DB remains read-only.
+_DONE_VISIBILITY_SECONDS = 3 * 24 * 3600
 
 # Internal columns we strip from the wire payload (humans don't care, and
 # some of them — like claim_lock — would leak agent-internal details).
@@ -60,7 +61,8 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 def _empty_columns() -> list[dict[str, Any]]:
     return [
-        {"name": "Backlog", "tasks": []},
+        {"name": "Assigned / Awaiting Hermione", "tasks": []},
+        {"name": "Queued / Assigned", "tasks": []},
         {"name": "In Progress", "tasks": []},
         {"name": "Done", "tasks": []},
     ]
@@ -135,20 +137,25 @@ class HermesKanbanCollector:
             )
             rows = [_row_to_dict(r) for r in cur.fetchall()]
 
-            backlog: list[dict[str, Any]] = []
+            awaiting: list[dict[str, Any]] = []
+            queued: list[dict[str, Any]] = []
             inprog: list[dict[str, Any]] = []
             done: list[dict[str, Any]] = []
             for r in rows:
                 s = r.get("status", "")
                 if s in _BACKLOG_STATUSES:
-                    backlog.append(r)
+                    if r.get("assignee"):
+                        queued.append(r)
+                    else:
+                        awaiting.append(r)
                 elif s in _INPROGRESS_STATUSES:
                     inprog.append(r)
                 elif s in _DONE_STATUSES:
                     done.append(r)
 
             columns = [
-                {"name": "Backlog", "tasks": backlog},
+                {"name": "Assigned / Awaiting Hermione", "tasks": awaiting},
+                {"name": "Queued / Assigned", "tasks": queued},
                 {"name": "In Progress", "tasks": inprog},
                 {"name": "Done", "tasks": done},
             ]

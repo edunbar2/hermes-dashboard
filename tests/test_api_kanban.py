@@ -129,13 +129,15 @@ def kanban_client(tmp_path) -> TestClient:
     return TestClient(create_app(cfg))
 
 
-def test_board_returns_three_columns(kanban_client):
+def test_board_returns_control_columns(kanban_client):
     r = kanban_client.get("/api/kanban/board")
     assert r.status_code == 200
     body = r.json()["data"]
     assert body["available"] is True
     cols = {c["name"]: c for c in body["columns"]}
-    assert set(cols.keys()) == {"Backlog", "In Progress", "Done"}
+    assert set(cols.keys()) == {
+        "Assigned / Awaiting Hermione", "Queued / Assigned", "In Progress", "Done"
+    }
 
 
 def test_board_buckets_each_status_correctly(kanban_client):
@@ -143,8 +145,10 @@ def test_board_buckets_each_status_correctly(kanban_client):
     cols = {c["name"]: [t["id"] for t in c["tasks"]]
             for c in r.json()["data"]["columns"]}
 
-    # Backlog: triage + todo + ready
-    assert set(cols["Backlog"]) == {"t-3", "t-3b", "t-3c"}
+    # Awaiting: unassigned triage/todo/ready
+    assert set(cols["Assigned / Awaiting Hermione"]) == {"t-3b"}
+    # Queued: assigned triage/todo/ready
+    assert set(cols["Queued / Assigned"]) == {"t-3", "t-3c"}
     # In Progress: running + blocked
     assert set(cols["In Progress"]) == {"t-2", "t-2b"}
     # Done: recent done only
@@ -159,9 +163,9 @@ def test_archived_tasks_hidden(kanban_client):
 
 
 def test_old_done_tasks_filtered(kanban_client, tmp_path):
-    """Done cards older than 24h must drop off the board even if not archived."""
+    """Done cards older than 3 days must drop off the board even if not archived."""
     conn = sqlite3.connect(tmp_path / "kanban.db")
-    old = int(time.time()) - 86400 * 3
+    old = int(time.time()) - 86400 * 4
     conn.execute(
         "INSERT INTO tasks(id, title, status, priority, created_at, completed_at) "
         "VALUES (?,?,?,?,?,?)",
@@ -216,9 +220,12 @@ def test_board_empty_when_db_missing(tmp_path):
     body = r.json()["data"]
     assert body["available"] is False
     assert body["total"] == 0
-    # All three columns still present (empty)
+    # All four control columns still present (empty)
     cols = {c["name"]: c["tasks"] for c in body["columns"]}
-    assert cols["Backlog"] == cols["In Progress"] == cols["Done"] == []
+    assert cols["Assigned / Awaiting Hermione"] == []
+    assert cols["Queued / Assigned"] == []
+    assert cols["In Progress"] == []
+    assert cols["Done"] == []
 
 
 def test_archive_endpoint_sets_watermark(kanban_client):
@@ -245,7 +252,7 @@ def test_archive_clears_done_column(kanban_client):
     done_post = next(c["tasks"] for c in post["columns"] if c["name"] == "Done")
     assert done_post == []
 
-    # In-progress and Backlog must NOT be affected by archive.
+    # In-progress and queued/awaiting tasks must NOT be affected by archive.
     inprog_post = next(c["tasks"] for c in post["columns"] if c["name"] == "In Progress")
     assert {t["id"] for t in inprog_post} == {"t-2", "t-2b"}
 
@@ -258,8 +265,10 @@ def test_state_module_roundtrip(tmp_path):
     ts = ds.set_archive_watermark(tmp_path)
     assert ds.get_archive_watermark(tmp_path) == ts
 
-    # Corrupt file → falls back to {} silently
+    # Corrupt file → falls back to versioned defaults silently
     (tmp_path / "dashboard-state.json").write_text("not json")
-    assert ds.load(tmp_path) == {}
+    recovered = ds.load(tmp_path)
+    assert recovered["schema_version"] == 2
+    assert recovered["dashboard_tasks"] == []
     assert ds.get_archive_watermark(tmp_path) == 0
 

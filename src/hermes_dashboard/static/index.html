@@ -3,33 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Hermes Dashboard</title>
+  <title>Hermes Control</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">⌘ Hermes</div>
+    <div>
+      <div class="brand">⌘ Hermes Control</div>
+      <div class="subtitle">multi-agent operations deck · LAN :2002</div>
+    </div>
     <div class="status" id="connection-status">connecting…</div>
   </header>
 
-  <main class="grid">
-    <section class="panel" data-panel="system" id="panel-system">
-      <h2>System</h2>
+  <main class="grid control-grid">
+    <section class="panel panel-system" data-panel="system" id="panel-system">
+      <h2>System Performance</h2>
       <div class="panel-body" id="panel-system-body"></div>
     </section>
 
-    <section class="panel" data-panel="agents" id="panel-agents">
-      <h2>Agents</h2>
+    <section class="panel panel-agents panel-wide" data-panel="agents" id="panel-agents">
+      <h2>Agent Activity</h2>
       <div class="panel-body" id="panel-agents-body"></div>
     </section>
 
     <section class="panel panel-wide" data-panel="kanban" id="panel-kanban">
-      <h2>Kanban — agent work</h2>
+      <h2>Mission Board</h2>
       <div class="panel-body" id="panel-kanban-body"></div>
     </section>
 
-    <section class="panel panel-wide" data-panel="chat" id="panel-chat">
-      <h2>Chat</h2>
+    <section class="panel panel-wide panel-console" data-panel="chat" id="panel-chat">
+      <h2>Command Console</h2>
       <div class="panel-body" id="panel-chat-body"></div>
     </section>
   </main>
