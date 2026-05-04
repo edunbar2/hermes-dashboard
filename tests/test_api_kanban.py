@@ -257,6 +257,23 @@ def test_archive_clears_done_column(kanban_client):
     assert {t["id"] for t in inprog_post} == {"t-2", "t-2b"}
 
 
+def test_dashboard_task_revision_advances_on_create_update_and_archive(tmp_path):
+    from hermes_dashboard import state as ds
+
+    assert ds.latest_dashboard_task_update(tmp_path) == 0
+    task = ds.create_dashboard_task(tmp_path, title="Revision check")
+    rev1 = ds.latest_dashboard_task_update(tmp_path)
+    assert rev1 > 0
+
+    ds.update_dashboard_task(tmp_path, task["id"], status="done")
+    rev2 = ds.latest_dashboard_task_update(tmp_path)
+    assert rev2 > rev1
+
+    ds.archive_done_dashboard_tasks(tmp_path, older_than_days=0)
+    rev3 = ds.latest_dashboard_task_update(tmp_path)
+    assert rev3 > rev2
+
+
 def test_state_module_roundtrip(tmp_path):
     """Direct unit test for the state module — atomic write, default zero."""
     from hermes_dashboard import state as ds

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .. import state as dash_state
+from ..safe_paths import resolve_child
 from .base import envelope
 
 _BACKLOG_STATUSES = {"triage", "todo", "ready"}
@@ -74,7 +75,7 @@ class HermesKanbanCollector:
     name = "hermes_kanban"
 
     def __init__(self, hermes_home: Path):
-        self.db_path = Path(hermes_home) / "kanban.db"
+        self.db_path = resolve_child(hermes_home, "kanban.db")
 
     def _connect_ro(self) -> Optional[sqlite3.Connection]:
         """Open the DB in read-only URI mode. Returns None if missing."""

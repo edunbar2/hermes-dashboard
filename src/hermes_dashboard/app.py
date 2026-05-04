@@ -15,8 +15,10 @@ from .api import system as api_system
 from .api import tasks as api_tasks
 from .collectors import build_registry
 from .config import DashboardConfig
+from .safe_paths import resolve_child, resolve_root
 
-STATIC_DIR = Path(__file__).parent / "static"
+STATIC_DIR = resolve_root(Path(__file__).parent / "static")
+INDEX_HTML = resolve_child(STATIC_DIR, "index.html")
 
 
 def create_app(config: DashboardConfig | None = None) -> FastAPI:
@@ -39,7 +41,7 @@ def create_app(config: DashboardConfig | None = None) -> FastAPI:
 
     @app.get("/")
     async def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(INDEX_HTML)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

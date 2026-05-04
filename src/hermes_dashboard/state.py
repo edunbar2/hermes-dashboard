@@ -15,17 +15,25 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from .safe_paths import resolve_child
+
 _FILENAME = "dashboard-state.json"
 _LOCK = threading.Lock()
 
 
+def state_path(hermes_home: Path) -> Path:
+    """Resolved dashboard state file confined to the configured Hermes home."""
+    return resolve_child(hermes_home, _FILENAME)
+
+
 def _path(hermes_home: Path) -> Path:
-    return Path(hermes_home) / _FILENAME
+    return state_path(hermes_home)
 
 
 def _default_state() -> dict[str, Any]:
     return {
         "schema_version": 2,
+        "revision": 0,
         "kanban_archive_watermark": 0,
         "done_auto_archive_days": 3,
         "dashboard_tasks": [],
@@ -55,9 +63,16 @@ def save(hermes_home: Path, state: dict[str, Any]) -> None:
     p = _path(hermes_home)
     p.parent.mkdir(parents=True, exist_ok=True)
     state.setdefault("schema_version", 2)
+    state.setdefault("revision", 0)
     tmp = p.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(state, indent=2, sort_keys=True))
     tmp.replace(p)
+
+
+def _bump_revision(state: dict[str, Any]) -> int:
+    """Monotonic state revision used by SSE change detection."""
+    state["revision"] = int(state.get("revision") or 0) + 1
+    return state["revision"]
 
 
 def get_archive_watermark(hermes_home: Path) -> int:
@@ -71,6 +86,7 @@ def set_archive_watermark(hermes_home: Path, ts: int | None = None) -> int:
     with _LOCK:
         s = load(hermes_home)
         s["kanban_archive_watermark"] = ts
+        _bump_revision(s)
         save(hermes_home, s)
     return ts
 
@@ -112,8 +128,14 @@ def create_dashboard_task(
         tasks = list(s.get("dashboard_tasks", []))
         tasks.append(task)
         s["dashboard_tasks"] = tasks
+        _bump_revision(s)
         save(hermes_home, s)
     return task
+
+
+def latest_dashboard_task_update(hermes_home: Path) -> int:
+    """Cheap change detector for dashboard-owned task state."""
+    return int(load(hermes_home).get("revision") or 0)
 
 
 def update_dashboard_task(hermes_home: Path, task_id: str, **updates: Any) -> dict[str, Any] | None:
@@ -129,6 +151,7 @@ def update_dashboard_task(hermes_home: Path, task_id: str, **updates: Any) -> di
                 task.update(safe_updates)
                 task["updated_at"] = int(time.time())
                 s["dashboard_tasks"] = tasks
+                _bump_revision(s)
                 save(hermes_home, s)
                 return task
     return None
@@ -145,6 +168,8 @@ def archive_done_dashboard_tasks(hermes_home: Path, older_than_days: int = 3) ->
             if task.get("status") == "done" and not task.get("archived_at") and completed_at <= cutoff:
                 task["archived_at"] = int(time.time())
                 archived += 1
+        if archived:
+            _bump_revision(s)
         s["dashboard_tasks"] = tasks
         save(hermes_home, s)
     return archived

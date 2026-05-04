@@ -54,9 +54,11 @@ export async function mountKanbanPanel(root) {
           <option value="aegis">Aegis</option><option value="daedalus">Daedalus</option><option value="vox">Vox</option>
         </select>
         <textarea name="body" rows="2" placeholder="Objective / constraints"></textarea>
-        <button type="submit">queue task</button>
       </form>
-      <div id="task-create-status" class="create-status"></div>
+      <div class="task-actions">
+        <button form="task-form" type="submit">queue task</button>
+        <div id="task-create-status" class="create-status"></div>
+      </div>
     </div>
     <div class="kanban" id="kanban-grid"></div>`;
 

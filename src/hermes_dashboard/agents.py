@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from .safe_paths import resolve_child
+
 
 @dataclass(frozen=True)
 class AgentProfile:
@@ -54,7 +56,10 @@ def all_agents() -> Iterable[AgentProfile]:
 
 
 def get_agent(agent_id: str) -> AgentProfile | None:
-    return _BY_ID.get(agent_id.lower())
+    key = str(agent_id or "").strip().lower()
+    if not key or any(sep in key for sep in ("/", "\\")) or ".." in key:
+        return None
+    return _BY_ID.get(key)
 
 
 def normalize_agent(value: str | None) -> str | None:
@@ -79,7 +84,10 @@ def avatar_path(profiles_dir: Path, agent_id: str) -> Path | None:
     profile = get_agent(agent_id)
     if profile is None:
         return None
-    path = Path(profiles_dir) / profile.avatar_filename
+    try:
+        path = resolve_child(profiles_dir, profile.avatar_filename)
+    except ValueError:
+        return None
     if not path.exists() or not path.is_file():
         return None
     return path
